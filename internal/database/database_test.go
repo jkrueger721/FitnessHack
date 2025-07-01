@@ -39,18 +39,18 @@ func mustStartPostgresContainer() (func(context.Context) error, error) {
 
 	dbHost, err := dbContainer.Host(context.Background())
 	if err != nil {
-		return dbContainer.Terminate, err
+		return func(ctx context.Context) error { return dbContainer.Container.Terminate(ctx) }, err
 	}
 
 	dbPort, err := dbContainer.MappedPort(context.Background(), "5432/tcp")
 	if err != nil {
-		return dbContainer.Terminate, err
+		return func(ctx context.Context) error { return dbContainer.Container.Terminate(ctx) }, err
 	}
 
 	host = dbHost
 	port = dbPort.Port()
 
-	return dbContainer.Terminate, err
+	return func(ctx context.Context) error { return dbContainer.Container.Terminate(ctx) }, nil
 }
 
 func TestMain(m *testing.M) {
