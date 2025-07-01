@@ -9,6 +9,7 @@ import (
 	"fitness-hack/internal/database"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/shopspring/decimal"
 )
 
 // Cache key helpers
@@ -22,18 +23,27 @@ func workoutExercisesListCacheKey(limit, offset int) string {
 
 // Helper to convert database workout exercise to response model
 func workoutExerciseToResponse(we *database.Workout_exercises) database.WorkoutExerciseResponse {
+	// Handle type assertions safely
+	var workoutId, exerciseId string
+	if we.Workout_id != "" {
+		workoutId = we.Workout_id
+	}
+	if we.Exercise_id != "" {
+		exerciseId = we.Exercise_id
+	}
+
 	return database.WorkoutExerciseResponse{
-		Id:               we.Id,
-		Workout_id:       we.Workout_id,
-		Exercise_id:      we.Exercise_id,
-		Sets:             we.Sets,
-		Reps:             we.Reps,
-		Weight_kg:        we.Weight_kg,
-		Duration_seconds: we.Duration_seconds,
-		Order_index:      we.Order_index,
-		Rest_seconds:     we.Rest_seconds,
-		Notes:            we.Notes,
-		Created_at:       we.Created_at,
+		ID:              we.Id,
+		WorkoutID:       workoutId,
+		ExerciseID:      exerciseId,
+		Sets:            we.Sets,
+		Reps:            we.Reps,
+		WeightKg:        we.Weight_kg.InexactFloat64(),
+		DurationSeconds: we.Duration_seconds,
+		OrderIndex:      we.Order_index,
+		RestSeconds:     we.Rest_seconds,
+		Notes:           we.Notes,
+		CreatedAt:       we.Created_at,
 	}
 }
 
@@ -46,14 +56,14 @@ func (s *FiberServer) createWorkoutExercise(c *fiber.Ctx) error {
 
 	// Create database workout exercise
 	workoutExercise := database.Workout_exercises{
-		Workout_id:       req.Workout_id,
-		Exercise_id:      req.Exercise_id,
+		Workout_id:       req.WorkoutID,
+		Exercise_id:      req.ExerciseID,
 		Sets:             req.Sets,
 		Reps:             req.Reps,
-		Weight_kg:        req.Weight_kg,
-		Duration_seconds: req.Duration_seconds,
-		Order_index:      req.Order_index,
-		Rest_seconds:     req.Rest_seconds,
+		Weight_kg:        decimal.NewFromFloat(req.WeightKg),
+		Duration_seconds: req.DurationSeconds,
+		Order_index:      req.OrderIndex,
+		Rest_seconds:     req.RestSeconds,
 		Notes:            req.Notes,
 		Created_at:       time.Now(),
 	}
@@ -167,32 +177,32 @@ func (s *FiberServer) updateWorkoutExercise(c *fiber.Ctx) error {
 	}
 
 	// Update fields if provided
-	if req.Workout_id != nil {
-		existingWorkoutExercise.Workout_id = *req.Workout_id
+	if req.WorkoutID != nil {
+		existingWorkoutExercise.Workout_id = *req.WorkoutID
 	}
-	if req.Exercise_id != nil {
-		existingWorkoutExercise.Exercise_id = *req.Exercise_id
+	if req.ExerciseID != nil {
+		existingWorkoutExercise.Exercise_id = *req.ExerciseID
 	}
 	if req.Sets != nil {
 		existingWorkoutExercise.Sets = *req.Sets
 	}
 	if req.Reps != nil {
-		existingWorkoutExercise.Reps = req.Reps
+		existingWorkoutExercise.Reps = *req.Reps
 	}
-	if req.Weight_kg != nil {
-		existingWorkoutExercise.Weight_kg = req.Weight_kg
+	if req.WeightKg != nil {
+		existingWorkoutExercise.Weight_kg = decimal.NewFromFloat(*req.WeightKg)
 	}
-	if req.Duration_seconds != nil {
-		existingWorkoutExercise.Duration_seconds = req.Duration_seconds
+	if req.DurationSeconds != nil {
+		existingWorkoutExercise.Duration_seconds = *req.DurationSeconds
 	}
-	if req.Order_index != nil {
-		existingWorkoutExercise.Order_index = *req.Order_index
+	if req.OrderIndex != nil {
+		existingWorkoutExercise.Order_index = *req.OrderIndex
 	}
-	if req.Rest_seconds != nil {
-		existingWorkoutExercise.Rest_seconds = *req.Rest_seconds
+	if req.RestSeconds != nil {
+		existingWorkoutExercise.Rest_seconds = *req.RestSeconds
 	}
 	if req.Notes != nil {
-		existingWorkoutExercise.Notes = req.Notes
+		existingWorkoutExercise.Notes = *req.Notes
 	}
 
 	updatedWorkoutExercise, err := s.db.UpdateWorkoutExercise(ctx, existingWorkoutExercise)

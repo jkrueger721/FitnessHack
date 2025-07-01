@@ -198,3 +198,10 @@ func (s *FiberServer) GetCache(ctx context.Context, key string) (string, error) 
 func (s *FiberServer) DeleteCache(ctx context.Context, key string) error {
 	return s.cache.Del(ctx, key).Err()
 }
+
+// NewFiberApp returns a *fiber.App with all routes registered, for Lambda or custom entrypoints
+func NewFiberApp() *fiber.App {
+	server := New()
+	server.RegisterFiberRoutes()
+	return server.App
+}

@@ -1,7 +1,8 @@
 import { makeAutoObservable, runInAction } from 'mobx'
-import { RootStore } from './RootStore'
-import { User } from '../types/User'
+import RootStore from './RootStore'
+import { User, CreateUserRequest } from '../types/User'
 import { userService } from '../services/userService'
+
 
 class UserStore {
   rootStore: RootStore
@@ -44,7 +45,7 @@ class UserStore {
     }
   }
 
-  async register(userData: Partial<User>) {
+  async register(userData: CreateUserRequest) {
     this.setLoading(true)
     this.setError(null)
     

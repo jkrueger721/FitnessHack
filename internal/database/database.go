@@ -38,6 +38,7 @@ type Service interface {
 	// --- USERS CRUD ---
 	CreateUser(ctx context.Context, user *Users) (*Users, error)
 	GetUserByID(ctx context.Context, id string) (*Users, error)
+	GetUserByEmail(ctx context.Context, email string) (*Users, error)
 	ListUsers(ctx context.Context, limit, offset int) ([]Users, error)
 	UpdateUser(ctx context.Context, user *Users) (*Users, error)
 	DeleteUser(ctx context.Context, id string) error
@@ -69,6 +70,13 @@ type Service interface {
 	ListWorkoutSessions(ctx context.Context, limit, offset int) ([]Workout_sessions, error)
 	UpdateWorkoutSession(ctx context.Context, ws *Workout_sessions) (*Workout_sessions, error)
 	DeleteWorkoutSession(ctx context.Context, id string) error
+
+	// --- PROGRAMS CRUD ---
+	CreateProgram(ctx context.Context, program *Programs) (*Programs, error)
+	GetProgramByID(ctx context.Context, id string) (*Programs, error)
+	ListPrograms(ctx context.Context, limit, offset int) ([]Programs, error)
+	UpdateProgram(ctx context.Context, program *Programs) (*Programs, error)
+	DeleteProgram(ctx context.Context, id string) error
 }
 
 type service struct {
@@ -235,28 +243,69 @@ func (s *service) Close() error {
 }
 
 func (s *service) CreateUser(ctx context.Context, user *Users) (*Users, error) {
-	query := `INSERT INTO users (id, email, username, password_hash, first_name, last_name, created_at, updated_at)
-		VALUES (:id, :email, :username, :password_hash, :first_name, :last_name, :created_at, :updated_at)
+	query := `INSERT INTO users (email, username, password_hash, first_name, last_name, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING *`
-	row, err := s.db.NamedQueryContext(ctx, query, user)
-	if err != nil {
-		return nil, err
-	}
-	defer row.Close()
-	if row.Next() {
-		var created Users
-		if err := row.StructScan(&created); err != nil {
-			return nil, err
+
+	// Handle type assertions for interface{} fields
+	var email, username, passwordHash, firstName, lastName string
+
+	if user.Email != nil {
+		if str, ok := user.Email.(string); ok {
+			email = str
 		}
-		return &created, nil
 	}
-	return nil, fmt.Errorf("failed to insert user")
+	if user.Username != nil {
+		if str, ok := user.Username.(string); ok {
+			username = str
+		}
+	}
+	if user.Password_hash != nil {
+		if str, ok := user.Password_hash.(string); ok {
+			passwordHash = str
+		}
+	}
+	if user.First_name != nil {
+		if str, ok := user.First_name.(string); ok {
+			firstName = str
+		}
+	}
+	if user.Last_name != nil {
+		if str, ok := user.Last_name.(string); ok {
+			lastName = str
+		}
+	}
+
+	// Log the values being inserted for debugging
+	fmt.Printf("DEBUG: Inserting user with values: email=%s, username=%s, passwordHash=%s, firstName=%s, lastName=%s\n",
+		email, username, passwordHash, firstName, lastName)
+
+	row := s.db.QueryRowContext(ctx, query, email, username, passwordHash, firstName, lastName, user.Created_at, user.Updated_at)
+
+	var created Users
+	err := row.Scan(&created.Id, &created.Email, &created.Username, &created.Password_hash, &created.First_name, &created.Last_name, &created.Created_at, &created.Updated_at)
+	if err != nil {
+		fmt.Printf("DEBUG: Error scanning result: %v\n", err)
+		return nil, fmt.Errorf("failed to scan user result: %w", err)
+	}
+
+	return &created, nil
 }
 
 func (s *service) GetUserByID(ctx context.Context, id string) (*Users, error) {
 	var user Users
 	query := `SELECT * FROM users WHERE id = $1`
 	err := s.db.GetContext(ctx, &user, query, id)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (s *service) GetUserByEmail(ctx context.Context, email string) (*Users, error) {
+	var user Users
+	query := `SELECT * FROM users WHERE email = $1`
+	err := s.db.GetContext(ctx, &user, query, email)
 	if err != nil {
 		return nil, err
 	}
@@ -295,8 +344,8 @@ func (s *service) DeleteUser(ctx context.Context, id string) error {
 
 // --- WORKOUTS CRUD ---
 func (s *service) CreateWorkout(ctx context.Context, workout *Workouts) (*Workouts, error) {
-	query := `INSERT INTO workouts (id, user_id, name, description, duration_minutes, created_at, updated_at)
-		VALUES (:id, :user_id, :name, :description, :duration_minutes, :created_at, :updated_at)
+	query := `INSERT INTO workouts (id, user_id, name, description, duration_minutes, program_id, created_at, updated_at)
+		VALUES (:id, :user_id, :name, :description, :duration_minutes, :program_id, :created_at, :updated_at)
 		RETURNING *`
 	row, err := s.db.NamedQueryContext(ctx, query, workout)
 	if err != nil {
@@ -331,7 +380,7 @@ func (s *service) ListWorkouts(ctx context.Context, limit, offset int) ([]Workou
 }
 
 func (s *service) UpdateWorkout(ctx context.Context, workout *Workouts) (*Workouts, error) {
-	query := `UPDATE workouts SET user_id=:user_id, name=:name, description=:description, duration_minutes=:duration_minutes, updated_at=:updated_at WHERE id=:id RETURNING *`
+	query := `UPDATE workouts SET user_id=:user_id, name=:name, description=:description, duration_minutes=:duration_minutes, program_id=:program_id, updated_at=:updated_at WHERE id=:id RETURNING *`
 	row, err := s.db.NamedQueryContext(ctx, query, workout)
 	if err != nil {
 		return nil, err
@@ -529,6 +578,66 @@ func (s *service) UpdateWorkoutSession(ctx context.Context, ws *Workout_sessions
 
 func (s *service) DeleteWorkoutSession(ctx context.Context, id string) error {
 	query := `DELETE FROM workout_sessions WHERE id = $1`
+	_, err := s.db.ExecContext(ctx, query, id)
+	return err
+}
+
+// --- PROGRAMS CRUD ---
+func (s *service) CreateProgram(ctx context.Context, program *Programs) (*Programs, error) {
+	query := `INSERT INTO programs (id, name, description, user_id, duration_weeks, difficulty, is_active, created_at, updated_at)
+		VALUES (:id, :name, :description, :user_id, :duration_weeks, :difficulty, :is_active, :created_at, :updated_at)
+		RETURNING *`
+	row, err := s.db.NamedQueryContext(ctx, query, program)
+	if err != nil {
+		return nil, err
+	}
+	defer row.Close()
+	if row.Next() {
+		var created Programs
+		if err := row.StructScan(&created); err != nil {
+			return nil, err
+		}
+		return &created, nil
+	}
+	return nil, fmt.Errorf("failed to insert program")
+}
+
+func (s *service) GetProgramByID(ctx context.Context, id string) (*Programs, error) {
+	var program Programs
+	query := `SELECT * FROM programs WHERE id = $1`
+	err := s.db.GetContext(ctx, &program, query, id)
+	if err != nil {
+		return nil, err
+	}
+	return &program, nil
+}
+
+func (s *service) ListPrograms(ctx context.Context, limit, offset int) ([]Programs, error) {
+	var programs []Programs
+	query := `SELECT * FROM programs ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+	err := s.db.SelectContext(ctx, &programs, query, limit, offset)
+	return programs, err
+}
+
+func (s *service) UpdateProgram(ctx context.Context, program *Programs) (*Programs, error) {
+	query := `UPDATE programs SET name=:name, description=:description, user_id=:user_id, duration_weeks=:duration_weeks, difficulty=:difficulty, is_active=:is_active, updated_at=:updated_at WHERE id=:id RETURNING *`
+	row, err := s.db.NamedQueryContext(ctx, query, program)
+	if err != nil {
+		return nil, err
+	}
+	defer row.Close()
+	if row.Next() {
+		var updated Programs
+		if err := row.StructScan(&updated); err != nil {
+			return nil, err
+		}
+		return &updated, nil
+	}
+	return nil, fmt.Errorf("failed to update program")
+}
+
+func (s *service) DeleteProgram(ctx context.Context, id string) error {
+	query := `DELETE FROM programs WHERE id = $1`
 	_, err := s.db.ExecContext(ctx, query, id)
 	return err
 }

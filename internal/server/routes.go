@@ -76,6 +76,14 @@ func (s *FiberServer) RegisterFiberRoutes() {
 	workoutSessions.Get("/:id", s.getWorkoutSession)
 	workoutSessions.Put("/:id", s.updateWorkoutSession)
 	workoutSessions.Delete("/:id", s.deleteWorkoutSession)
+
+	// Programs routes
+	programs := api.Group("/programs")
+	programs.Post("/", s.createProgram)
+	programs.Get("/", s.listPrograms)
+	programs.Get("/:id", s.getProgram)
+	programs.Put("/:id", s.updateProgram)
+	programs.Delete("/:id", s.deleteProgram)
 }
 
 func (s *FiberServer) HelloWorldHandler(c *fiber.Ctx) error {

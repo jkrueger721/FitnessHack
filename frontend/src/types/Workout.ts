@@ -3,6 +3,7 @@ export interface Workout {
   name: string
   description?: string
   userId: string
+  programId?: string
   createdAt: string
   updatedAt: string
 }
@@ -10,6 +11,7 @@ export interface Workout {
 export interface CreateWorkoutRequest {
   name: string
   description?: string
+  programId?: string
 }
 
 export interface UpdateWorkoutRequest {

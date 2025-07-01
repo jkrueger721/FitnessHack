@@ -22,16 +22,45 @@ func exercisesListCacheKey(limit, offset int) string {
 
 // Helper to convert database exercise to response model
 func exerciseToResponse(exercise *database.Exercises) database.ExerciseResponse {
+	// Handle type assertions safely
+	var name string
+	if exercise.Name != nil {
+		if str, ok := exercise.Name.(string); ok {
+			name = str
+		}
+	}
+
+	var muscleGroup string
+	if exercise.Muscle_group != nil {
+		if str, ok := exercise.Muscle_group.(string); ok {
+			muscleGroup = str
+		}
+	}
+
+	var equipment string
+	if exercise.Equipment != nil {
+		if str, ok := exercise.Equipment.(string); ok {
+			equipment = str
+		}
+	}
+
+	var difficultyLevel string
+	if exercise.Difficulty_level != nil {
+		if str, ok := exercise.Difficulty_level.(string); ok {
+			difficultyLevel = str
+		}
+	}
+
 	return database.ExerciseResponse{
-		Id:               exercise.Id,
-		Name:             exercise.Name,
-		Description:      exercise.Description,
-		Muscle_group:     exercise.Muscle_group,
-		Equipment:        exercise.Equipment,
-		Difficulty_level: exercise.Difficulty_level,
-		Instructions:     exercise.Instructions,
-		Created_at:       exercise.Created_at,
-		Updated_at:       exercise.Updated_at,
+		ID:              exercise.Id,
+		Name:            name,
+		Description:     exercise.Description,
+		MuscleGroup:     muscleGroup,
+		Equipment:       equipment,
+		DifficultyLevel: difficultyLevel,
+		Instructions:    exercise.Instructions,
+		CreatedAt:       exercise.Created_at,
+		UpdatedAt:       exercise.Updated_at,
 	}
 }
 
@@ -46,9 +75,9 @@ func (s *FiberServer) createExercise(c *fiber.Ctx) error {
 	exercise := database.Exercises{
 		Name:             req.Name,
 		Description:      req.Description,
-		Muscle_group:     req.Muscle_group,
+		Muscle_group:     req.MuscleGroup,
 		Equipment:        req.Equipment,
-		Difficulty_level: req.Difficulty_level,
+		Difficulty_level: req.DifficultyLevel,
 		Instructions:     req.Instructions,
 		Created_at:       time.Now(),
 		Updated_at:       time.Now(),
@@ -167,19 +196,19 @@ func (s *FiberServer) updateExercise(c *fiber.Ctx) error {
 		existingExercise.Name = *req.Name
 	}
 	if req.Description != nil {
-		existingExercise.Description = req.Description
+		existingExercise.Description = *req.Description
 	}
-	if req.Muscle_group != nil {
-		existingExercise.Muscle_group = req.Muscle_group
+	if req.MuscleGroup != nil {
+		existingExercise.Muscle_group = *req.MuscleGroup
 	}
 	if req.Equipment != nil {
 		existingExercise.Equipment = req.Equipment
 	}
-	if req.Difficulty_level != nil {
-		existingExercise.Difficulty_level = req.Difficulty_level
+	if req.DifficultyLevel != nil {
+		existingExercise.Difficulty_level = *req.DifficultyLevel
 	}
 	if req.Instructions != nil {
-		existingExercise.Instructions = req.Instructions
+		existingExercise.Instructions = *req.Instructions
 	}
 	existingExercise.Updated_at = time.Now()
 

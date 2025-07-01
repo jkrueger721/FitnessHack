@@ -47,14 +47,43 @@ func generateJWT(userID string) (string, error) {
 
 // Helper to convert database user to response model
 func userToResponse(user *database.Users) database.UserResponse {
+	// Handle type assertions safely
+	var email string
+	if user.Email != nil {
+		if str, ok := user.Email.(string); ok {
+			email = str
+		}
+	}
+
+	var username string
+	if user.Username != nil {
+		if str, ok := user.Username.(string); ok {
+			username = str
+		}
+	}
+
+	var firstName string
+	if user.First_name != nil {
+		if str, ok := user.First_name.(string); ok {
+			firstName = str
+		}
+	}
+
+	var lastName string
+	if user.Last_name != nil {
+		if str, ok := user.Last_name.(string); ok {
+			lastName = str
+		}
+	}
+
 	return database.UserResponse{
-		Id:         user.Id,
-		Email:      user.Email,
-		Username:   user.Username,
-		First_name: user.First_name,
-		Last_name:  user.Last_name,
-		Created_at: user.Created_at,
-		Updated_at: user.Updated_at,
+		ID:        user.Id,
+		Email:     email,
+		Username:  username,
+		FirstName: firstName,
+		LastName:  lastName,
+		CreatedAt: user.Created_at,
+		UpdatedAt: user.Updated_at,
 	}
 }
 
@@ -76,17 +105,21 @@ func (s *FiberServer) createUser(c *fiber.Ctx) error {
 		Email:         req.Email,
 		Username:      req.Username,
 		Password_hash: hash,
-		First_name:    req.First_name,
-		Last_name:     req.Last_name,
+		First_name:    req.FirstName,
+		Last_name:     req.LastName,
 		Created_at:    time.Now(),
 		Updated_at:    time.Now(),
 	}
+
+	// Log the user struct being created
+	fmt.Printf("DEBUG: Creating user struct: %+v\n", user)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	createdUser, err := s.db.CreateUser(ctx, &user)
 	if err != nil {
+		fmt.Printf("DEBUG: CreateUser error: %v\n", err)
 		return errorResponse(c, fiber.StatusInternalServerError, "Failed to create user: "+err.Error())
 	}
 
@@ -204,18 +237,11 @@ func (s *FiberServer) updateUser(c *fiber.Ctx) error {
 	if req.Username != nil {
 		existingUser.Username = *req.Username
 	}
-	if req.Password != nil {
-		hash, err := hashPassword(*req.Password)
-		if err != nil {
-			return errorResponse(c, fiber.StatusInternalServerError, "Failed to hash password")
-		}
-		existingUser.Password_hash = hash
+	if req.FirstName != nil {
+		existingUser.First_name = *req.FirstName
 	}
-	if req.First_name != nil {
-		existingUser.First_name = req.First_name
-	}
-	if req.Last_name != nil {
-		existingUser.Last_name = req.Last_name
+	if req.LastName != nil {
+		existingUser.Last_name = *req.LastName
 	}
 	existingUser.Updated_at = time.Now()
 
@@ -263,24 +289,24 @@ func (s *FiberServer) loginUser(c *fiber.Ctx) error {
 	defer cancel()
 
 	// Find user by email
-	users, err := s.db.ListUsers(ctx, 1, 0)
-	if err != nil || len(users) == 0 {
+	user, err := s.db.GetUserByEmail(ctx, req.Email)
+	if err != nil {
 		return errorResponse(c, fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
-	var user *database.Users
-	for i := range users {
-		if users[i].Email == req.Email {
-			user = &users[i]
-			break
+	// Handle type assertion for password hash
+	var passwordHash string
+	if user.Password_hash != nil {
+		if str, ok := user.Password_hash.(string); ok {
+			passwordHash = str
 		}
 	}
 
-	if user == nil || user.Password_hash == "" {
+	if user == nil || passwordHash == "" {
 		return errorResponse(c, fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
-	if !checkPasswordHash(req.Password, user.Password_hash) {
+	if !checkPasswordHash(req.Password, passwordHash) {
 		return errorResponse(c, fiber.StatusUnauthorized, "Invalid credentials")
 	}
 

@@ -23,16 +23,16 @@ func workoutSessionsListCacheKey(limit, offset int) string {
 // Helper to convert database workout session to response model
 func workoutSessionToResponse(ws *database.Workout_sessions) database.WorkoutSessionResponse {
 	return database.WorkoutSessionResponse{
-		Id:               ws.Id,
-		User_id:          ws.User_id,
-		Workout_id:       ws.Workout_id,
-		Name:             ws.Name,
-		Started_at:       ws.Started_at,
-		Completed_at:     ws.Completed_at,
-		Duration_minutes: ws.Duration_minutes,
-		Notes:            ws.Notes,
-		Created_at:       ws.Created_at,
-		Updated_at:       ws.Updated_at,
+		ID:              ws.Id,
+		UserID:          ws.User_id,
+		WorkoutID:       ws.Workout_id,
+		Name:            ws.Name.(string),
+		StartedAt:       ws.Started_at,
+		CompletedAt:     &ws.Completed_at,
+		DurationMinutes: ws.Duration_minutes,
+		Notes:           ws.Notes,
+		CreatedAt:       ws.Created_at,
+		UpdatedAt:       ws.Updated_at,
 	}
 }
 
@@ -48,18 +48,18 @@ func (s *FiberServer) createWorkoutSession(c *fiber.Ctx) error {
 
 	// Set default started_at if not provided
 	startedAt := time.Now()
-	if req.Started_at != nil {
-		startedAt = *req.Started_at
+	if req.StartedAt != nil {
+		startedAt = *req.StartedAt
 	}
 
 	// Create database workout session
 	workoutSession := database.Workout_sessions{
 		User_id:          userID,
-		Workout_id:       req.Workout_id,
+		Workout_id:       req.WorkoutID,
 		Name:             req.Name,
 		Started_at:       startedAt,
-		Completed_at:     req.Completed_at,
-		Duration_minutes: req.Duration_minutes,
+		Completed_at:     *req.CompletedAt,
+		Duration_minutes: req.DurationMinutes,
 		Notes:            req.Notes,
 		Created_at:       time.Now(),
 		Updated_at:       time.Now(),
@@ -174,23 +174,23 @@ func (s *FiberServer) updateWorkoutSession(c *fiber.Ctx) error {
 	}
 
 	// Update fields if provided
-	if req.Workout_id != nil {
-		existingWorkoutSession.Workout_id = req.Workout_id
+	if req.WorkoutID != nil {
+		existingWorkoutSession.Workout_id = *req.WorkoutID
 	}
 	if req.Name != nil {
 		existingWorkoutSession.Name = *req.Name
 	}
-	if req.Started_at != nil {
-		existingWorkoutSession.Started_at = *req.Started_at
+	if req.StartedAt != nil {
+		existingWorkoutSession.Started_at = *req.StartedAt
 	}
-	if req.Completed_at != nil {
-		existingWorkoutSession.Completed_at = req.Completed_at
+	if req.CompletedAt != nil {
+		existingWorkoutSession.Completed_at = *req.CompletedAt
 	}
-	if req.Duration_minutes != nil {
-		existingWorkoutSession.Duration_minutes = req.Duration_minutes
+	if req.DurationMinutes != nil {
+		existingWorkoutSession.Duration_minutes = *req.DurationMinutes
 	}
 	if req.Notes != nil {
-		existingWorkoutSession.Notes = req.Notes
+		existingWorkoutSession.Notes = *req.Notes
 	}
 	existingWorkoutSession.Updated_at = time.Now()
 

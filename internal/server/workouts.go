@@ -23,13 +23,13 @@ func workoutsListCacheKey(limit, offset int) string {
 // Helper to convert database workout to response model
 func workoutToResponse(workout *database.Workouts) database.WorkoutResponse {
 	return database.WorkoutResponse{
-		Id:               workout.Id,
-		User_id:          workout.User_id,
-		Name:             workout.Name,
-		Description:      workout.Description,
-		Duration_minutes: workout.Duration_minutes,
-		Created_at:       workout.Created_at,
-		Updated_at:       workout.Updated_at,
+		ID:              workout.Id,
+		UserID:          workout.User_id,
+		Name:            workout.Name,
+		Description:     workout.Description,
+		DurationMinutes: workout.Duration_minutes,
+		CreatedAt:       workout.Created_at,
+		UpdatedAt:       workout.Updated_at,
 	}
 }
 
@@ -48,9 +48,7 @@ func (s *FiberServer) createWorkout(c *fiber.Ctx) error {
 		User_id:          userID,
 		Name:             req.Name,
 		Description:      req.Description,
-		Duration_minutes: req.Duration_minutes,
-		Created_at:       time.Now(),
-		Updated_at:       time.Now(),
+		Duration_minutes: req.DurationMinutes,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -166,10 +164,10 @@ func (s *FiberServer) updateWorkout(c *fiber.Ctx) error {
 		existingWorkout.Name = *req.Name
 	}
 	if req.Description != nil {
-		existingWorkout.Description = req.Description
+		existingWorkout.Description = *req.Description
 	}
-	if req.Duration_minutes != nil {
-		existingWorkout.Duration_minutes = req.Duration_minutes
+	if req.DurationMinutes != nil {
+		existingWorkout.Duration_minutes = *req.DurationMinutes
 	}
 	existingWorkout.Updated_at = time.Now()
 

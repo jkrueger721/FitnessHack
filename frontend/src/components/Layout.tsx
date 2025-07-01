@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { observer } from 'mobx-react-lite'
-import { Home, Dumbbell, Activity, User } from 'lucide-react'
+import { Home, Dumbbell, Activity, User, Calendar } from 'lucide-react'
 
 interface LayoutProps {
   children: ReactNode
@@ -12,7 +12,8 @@ const Layout = observer(({ children }: LayoutProps) => {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: Home },
-    { path: '/workouts', label: 'Workouts', icon: Dumbbell },
+    { path: '/programs', label: 'Programs', icon: Dumbbell },
+    { path: '/workouts', label: 'Workouts', icon: Calendar },
     { path: '/exercises', label: 'Exercises', icon: Activity },
     { path: '/profile', label: 'Profile', icon: User },
   ]
