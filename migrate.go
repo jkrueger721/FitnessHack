@@ -19,15 +19,15 @@ func main() {
 		fmt.Println("Database Migration CLI")
 		fmt.Println("======================")
 		fmt.Println("Usage:")
-		fmt.Println("  go migrate                    - Run all pending migrations")
-		fmt.Println("  go migrate status             - Show migration status")
-		fmt.Println("  go migrate generate-models    - Generate Go models from database schema")
-		fmt.Println("  go migrate create-migration <name or filename> - Create a new migration file")
+		fmt.Println("  go run migrate.go                    - Run all pending migrations")
+		fmt.Println("  go run migrate.go status             - Show migration status")
+		fmt.Println("  go run migrate.go generate-models    - Generate Go models from database schema")
+		fmt.Println("  go run migrate.go create-migration <name or filename> - Create a new migration file")
 		fmt.Println("")
 		fmt.Println("Examples:")
-		fmt.Println("  go migrate create-migration add user profiles")
-		fmt.Println("  go migrate create-migration add_user_profiles.sql")
-		fmt.Println("  go migrate create-migration add-user-profiles")
+		fmt.Println("  go run migrate.go create-migration add user profiles")
+		fmt.Println("  go run migrate.go create-migration add_user_profiles.sql")
+		fmt.Println("  go run migrate.go create-migration add-user-profiles")
 		return
 	}
 

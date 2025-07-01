@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Migration CLI wrapper script
+# Usage: ./migrate [command] [args...]
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Run the migration CLI
+go run "$SCRIPT_DIR/cmd/migrate/main.go" "$@" 

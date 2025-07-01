@@ -5,6 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -34,9 +37,102 @@ func (c *CLI) Run(args []string) error {
 		return c.generateModels()
 	case "status":
 		return c.showStatus()
+	case "create-migration":
+		if len(args) < 2 {
+			return fmt.Errorf("usage: create-migration <name or filename>. Example: create-migration add_user_profiles.sql")
+		}
+		return c.createMigration(args[1])
 	default:
 		return fmt.Errorf("unknown command: %s", command)
 	}
+}
+
+// createMigration creates a new migration file with proper naming standards
+func (c *CLI) createMigration(input string) error {
+	// Remove .sql extension if present, and clean/format the name
+	name := input
+	if strings.HasSuffix(strings.ToLower(name), ".sql") {
+		name = name[:len(name)-4]
+	}
+	name = strings.ToLower(strings.ReplaceAll(name, " ", "_"))
+	name = strings.ReplaceAll(name, "-", "_")
+	// Remove any special characters
+	name = strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '_' {
+			return r
+		}
+		return -1
+	}, name)
+	if name == "" {
+		return fmt.Errorf("invalid migration name")
+	}
+
+	// Get the next migration number
+	nextNumber, err := c.getNextMigrationNumber()
+	if err != nil {
+		return fmt.Errorf("failed to get next migration number: %w", err)
+	}
+
+	// Create the filename
+	filename := fmt.Sprintf("%03d_%s.sql", nextNumber, name)
+	filepath := filepath.Join(DefaultMigrationsDir(), filename)
+
+	// Create the migration content
+	content := fmt.Sprintf(`-- Migration: %s
+-- Description: %s
+-- Date: %s
+
+-- Add your SQL statements here
+-- Example:
+-- CREATE TABLE IF NOT EXISTS table_name (
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     name VARCHAR(255) NOT NULL,
+--     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+--     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+-- );
+
+-- CREATE INDEX IF NOT EXISTS idx_table_name_column ON table_name(column);
+`, filename, strings.ReplaceAll(name, "_", " "), time.Now().Format("2006-01-02"))
+
+	// Create the file
+	if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to create migration file: %w", err)
+	}
+
+	fmt.Printf("Created migration file: %s\n", filepath)
+	fmt.Printf("Edit the file to add your SQL statements.\n")
+	return nil
+}
+
+// getNextMigrationNumber determines the next migration number by reading existing files
+func (c *CLI) getNextMigrationNumber() (int, error) {
+	migrationsDir := DefaultMigrationsDir()
+
+	// Read the migrations directory
+	entries, err := os.ReadDir(migrationsDir)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read migrations directory: %w", err)
+	}
+
+	maxNumber := 0
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
+			continue
+		}
+
+		// Extract number from filename (e.g., "001_create_users_table.sql" -> 1)
+		if len(entry.Name()) >= 3 {
+			var fileNumber int
+			if num, err := fmt.Sscanf(entry.Name()[:3], "%d", &fileNumber); err == nil && num > 0 {
+				// Keep track of the highest number
+				if fileNumber > maxNumber {
+					maxNumber = fileNumber
+				}
+			}
+		}
+	}
+
+	return maxNumber + 1, nil
 }
 
 // runMigrations runs all pending migrations
@@ -131,9 +227,15 @@ func RunCLI() error {
 
 	if len(args) == 0 {
 		fmt.Println("Database CLI Usage:")
-		fmt.Println("  migrate         - Run all pending migrations")
-		fmt.Println("  generate-models - Generate Go models from database schema")
-		fmt.Println("  status          - Show migration status")
+		fmt.Println("  migrate                    - Run all pending migrations")
+		fmt.Println("  generate-models            - Generate Go models from database schema")
+		fmt.Println("  status                     - Show migration status")
+		fmt.Println("  create-migration <name or filename> - Create a new migration file (e.g. add_user_profiles.sql or \"add user profiles\")")
+		fmt.Println("")
+		fmt.Println("Examples:")
+		fmt.Println("  create-migration add user profiles")
+		fmt.Println("  create-migration add_user_profiles.sql")
+		fmt.Println("  create-migration add-user-profiles")
 		return nil
 	}
 
